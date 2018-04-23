@@ -1,0 +1,52 @@
+classdef {{#invokerPackage}}{{invokerPackage}}{{/invokerPackage}}{{^invokerPackage}}Main{{/invokerPackage}}
+    properties
+    end
+    methods(Static){{#authMethods}}{{#isBasic}}
+
+        % Set {{type}} authentication method named {{name}}.
+        function set{{name}}Auth(username, password)
+            auth_str = matlab.net.base64encode(strcat(username, ':', password));
+            setenv(upper('{{#invokerPackage}}{{invokerPackage}}{{/invokerPackage}}{{^invokerPackage}}Main{{/invokerPackage}}_{{name}}_Auth'), char(strcat("Basic ", auth_str)));
+        end
+
+        function out = get{{name}}Auth()
+            out = getenv(upper('{{#invokerPackage}}{{invokerPackage}}{{/invokerPackage}}{{^invokerPackage}}Main{{/invokerPackage}}_{{name}}_Auth'));
+        end{{/isBasic}}{{#isApiKey}}{{#isKeyInQuery}}
+
+        % Set {{type}} authentication method named {{name}}.
+        function set{{name}}Auth(ticket)
+            setenv(upper('{{#invokerPackage}}{{invokerPackage}}{{/invokerPackage}}{{^invokerPackage}}Main{{/invokerPackage}}_{{name}}_Auth'), char(ticket));
+        end
+
+        function out = get{{name}}Auth()
+            out = getenv(upper('{{#invokerPackage}}{{invokerPackage}}{{/invokerPackage}}{{^invokerPackage}}Main{{/invokerPackage}}_{{name}}_Auth'));
+        end{{/isKeyInQuery}}{{/isApiKey}}
+
+        function out = is{{name}}AuthSet()
+            out = ~isempty(getenv(upper('{{#invokerPackage}}{{invokerPackage}}{{/invokerPackage}}{{^invokerPackage}}Main{{/invokerPackage}}_{{name}}_Auth'))) || getenv(upper('{{#invokerPackage}}{{invokerPackage}}{{/invokerPackage}}{{^invokerPackage}}Main{{/invokerPackage}}_{{name}}_Auth')) ~= "";
+        end{{/authMethods}}
+
+        function setBasePath(pathInput)
+            global basePath;
+            basePath = pathInput;
+        end
+
+        function out = getBasePath()
+            global basePath;
+            out = basePath;
+        end
+
+        function out = request(httpRequestArgs)
+            if strcmp(upper(httpRequestArgs.options.RequestMethod), upper('GET'))
+                out = webread(httpRequestArgs.url, httpRequestArgs.options);
+            else
+                bodyJsonString = [];
+                if isfield(httpRequestArgs, 'body')
+                    bodyJsonString = jsonencode(httpRequestArgs.body);
+                    bodyJsonString = strrep(bodyJsonString, '"x_', '"_');
+                end
+                out = webwrite(httpRequestArgs.url, bodyJsonString, httpRequestArgs.options);
+            end
+        end
+    end
+end
