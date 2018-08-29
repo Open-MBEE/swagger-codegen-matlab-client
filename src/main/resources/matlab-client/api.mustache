@@ -1,0 +1,65 @@
+%% {{#operations}}
+classdef {{classname}}
+    properties
+    end
+    methods(Static){{#operation}}
+        function out = {{operationId}}({{#allParams}}{{#required}}{{paramName}}, {{/required}}{{/allParams}}optionalArguments)
+        {{! --- Documentation (will appear on MATLAB help) --- }}
+        % {{operationId}}  {{summary}}
+        %
+        %     HTTPResponse = {{operationId}}({{#allParams}}{{#required}}{{paramName}}, {{/required}}{{/allParams}}optionalArguments)
+        %
+        %     Required Argument(s):{{#allParams}}{{#required}}
+        %         {{paramName}} ({{dataType}}) - {{unescapedDescription}}{{/required}}{{/allParams}}
+        %     OptionalArgument(s):{{#allParams}}{{^required}}
+        %         {{paramName}} ({{dataType}}) - {{unescapedDescription}}{{/required}}{{/allParams}}
+        %
+        %      e.g. optionalArguments = struct({{#allParams}}{{^required}}'{{paramName}}', {{paramName}}value{{#hasMore}}, {{/hasMore}}{{/required}}{{/allParams}})
+        global basePath;
+        httpMethod = '{{httpMethod}}';
+        queryParamsInputs = struct();
+        relativePath = '{{path}}';
+        {{#pathParams}}
+        relativePath = strrep(relativePath, strcat('{', '{{baseName}}', '}'), {{paramName}});
+        {{/pathParams}}
+        if ~exist('optionalArguments')
+            optionalArguments = struct();
+        end
+        {{! --- Handle API key auth arguments below --- }}{{#authMethods}}{{#isApiKey}}{{#isKeyInQuery}}
+        if {{#invokerPackage}}{{invokerPackage}}{{/invokerPackage}}{{^invokerPackage}}Main{{/invokerPackage}}.is{{name}}AuthSet(){{/isKeyInQuery}}{{/isApiKey}}{{/authMethods}}
+            {{#authMethods}}{{#isApiKey}}queryParamsInputs = setfield(queryParamsInputs, '{{keyParamName}}', {{#invokerPackage}}{{invokerPackage}}{{/invokerPackage}}{{^invokerPackage}}Main{{/invokerPackage}}.get{{name}}Auth());
+        end{{/isApiKey}}{{/authMethods}}
+        {{! --- Build the query parameter portion of url --- }}{{#allParams}}{{^required}}{{#isQueryParam}}
+        if isfield(optionalArguments, '{{paramName}}')
+            queryParamsInputs = setfield(queryParamsInputs, '{{paramName}}', getfield(optionalArguments, '{{paramName}}'));
+        end{{/isQueryParam}}{{/required}}{{/allParams}}
+        {{! 1. check if the queryParamBuilder arg data type is int, if yes, add a default int val }}
+        {{! 2. if user's arg is int, we still need to convert it to a string }}
+        if ~exist('queryParamsInputs')
+            queryParamsInputs = struct();
+        end
+
+        query = string(matlab.net.QueryParameter(queryParamsInputs));
+        if ~isempty(query)
+            query = strcat('?', query);
+        end
+        contextPath = '{{contextPath}}';
+        url = sprintf('%s%s%s%s', basePath, contextPath, relativePath, query);
+        headers = ["Content-Type", "application/json"];{{#authMethods}}{{#isBasic}}
+        if ~isempty(char({{#invokerPackage}}{{invokerPackage}}{{/invokerPackage}}{{^invokerPackage}}Main{{/invokerPackage}}.get{{name}}Auth()))
+            headers = [headers; "Authorization", string({{#invokerPackage}}{{invokerPackage}}{{/invokerPackage}}{{^invokerPackage}}Main{{/invokerPackage}}.get{{name}}Auth())];
+        end{{/isBasic}}{{/authMethods}}
+        options = weboptions('HeaderFields', headers, 'MediaType', 'application/json', 'RequestMethod', httpMethod, 'Timeout', Inf('double'));
+        httpRequestArgs = struct('url', url, {{#hasBodyParam}}'body', body, {{/hasBodyParam}}'options', options);
+        out = {{#invokerPackage}}{{invokerPackage}}{{/invokerPackage}}{{^invokerPackage}}Main{{/invokerPackage}}.request(httpRequestArgs);
+        end
+        {{/operation}}
+    end{{/operations}}
+end
+
+
+
+
+
+
+
